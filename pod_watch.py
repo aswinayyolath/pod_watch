@@ -10,11 +10,13 @@ FG_RED = curses.COLOR_RED
 FG_GREEN = curses.COLOR_GREEN
 FG_YELLOW = curses.COLOR_YELLOW
 
-def get_pods(namespace):
+def get_pods(namespace, kubeconfig):
     """Get the list of pods in the given namespace using kubectl."""
     cmd = ["kubectl", "get", "pods"]
     if namespace:
         cmd.extend(["-n", namespace])
+    if kubeconfig:
+        cmd.extend(["--kubeconfig", kubeconfig])
 
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.stdout
@@ -31,7 +33,7 @@ def parse_pod_status(line):
         return name, ready, status, restarts, age
     return None, None, None, None, None
 
-def main(stdscr, namespace, refresh_time):
+def main(stdscr, namespace, kubeconfig, refresh_time):
     curses.curs_set(0)
     curses.init_pair(1, FG_RED, curses.COLOR_BLACK)
     curses.init_pair(2, FG_GREEN, curses.COLOR_BLACK)
@@ -39,7 +41,7 @@ def main(stdscr, namespace, refresh_time):
 
     while True:
         stdscr.clear()
-        pods_output = get_pods(namespace)
+        pods_output = get_pods(namespace, kubeconfig)
         lines = pods_output.splitlines()
 
         if not lines:
@@ -71,7 +73,8 @@ def main(stdscr, namespace, refresh_time):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Watch Kubernetes pods and highlight not ready ones.")
     parser.add_argument('-n', '--namespace', type=str, help='Kubernetes namespace to watch')
+    parser.add_argument('-k', '--kubeconfig', type=str, help='Path to kubeconfig file')
     parser.add_argument('-t', '--time', type=int, default=10, help='Refresh time in seconds')
 
     args = parser.parse_args()
-    curses.wrapper(main, args.namespace, args.time)
+    curses.wrapper(main, args.namespace, args.kubeconfig, args.time)
